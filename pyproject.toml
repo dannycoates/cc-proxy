@@ -1,0 +1,16 @@
+[project]
+name = "cc-proxy"
+version = "0.1.0"
+description = "A mitmproxy addon for logging Claude API request/response bodies"
+requires-python = ">=3.13"
+
+dependencies = [
+    "mitmproxy>=10.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cc_proxy"]
