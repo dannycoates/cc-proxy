@@ -8,4 +8,5 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PORT="${1:-8080}"
 
 cd "$SCRIPT_DIR"
-exec uv run mitmdump -q -p "$PORT" -s "$SCRIPT_DIR/src/cc_proxy/json_request_logger.py"
+exec uv run mitmdump -q -p "$PORT" -s "$SCRIPT_DIR/src/cc_proxy/json_request_logger.py" \
+    "~u api.anthropic.com/v1/messages"
