@@ -1,0 +1,26 @@
+[Unit]
+Description=Claude Code Proxy (mitmproxy)
+After=network.target
+
+[Service]
+Type=simple
+User=danny
+Group=danny
+WorkingDirectory=/home/danny/code/cc-proxy
+ExecStart=/home/danny/code/cc-proxy/cc-proxy
+Restart=on-failure
+RestartSec=5
+
+# Logging
+StandardOutput=append:/var/log/cc-proxy/cc-proxy.log
+StandardError=append:/var/log/cc-proxy/cc-proxy.log
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/var/log/cc-proxy
+
+[Install]
+WantedBy=multi-user.target
