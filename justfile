@@ -1,52 +1,51 @@
 # cc-proxy management commands
 
-log_dir := "/var/log/cc-proxy"
 service := "cc-proxy"
+user_service_dir := env("HOME") / ".config/systemd/user"
+log_dir := env("HOME") / ".local/log/cc-proxy"
 
 # List available commands
 default:
     @just --list
 
-# Install systemd service and logrotate config
+# Install systemd user service
 install:
-    sudo mkdir -p {{log_dir}}
-    sudo chown {{env("USER")}}:{{env("USER")}} {{log_dir}}
-    sudo cp cc-proxy.service /etc/systemd/system/
-    sudo cp cc-proxy.logrotate /etc/logrotate.d/cc-proxy
-    sudo systemctl daemon-reload
+    mkdir -p {{user_service_dir}}
+    mkdir -p {{log_dir}}
+    cp cc-proxy.service {{user_service_dir}}/
+    systemctl --user daemon-reload
     @echo "Installed. Run 'just start' to start the service."
 
-# Uninstall systemd service and logrotate config
+# Uninstall systemd user service
 uninstall: stop
-    sudo systemctl disable {{service}} || true
-    sudo rm -f /etc/systemd/system/cc-proxy.service
-    sudo rm -f /etc/logrotate.d/cc-proxy
-    sudo systemctl daemon-reload
-    @echo "Uninstalled. Log directory {{log_dir}} preserved."
+    systemctl --user disable {{service}} || true
+    rm -f {{user_service_dir}}/cc-proxy.service
+    systemctl --user daemon-reload
+    @echo "Uninstalled."
 
 # Start the service
 start:
-    sudo systemctl start {{service}}
+    systemctl --user start {{service}}
 
 # Stop the service
 stop:
-    sudo systemctl stop {{service}}
+    systemctl --user stop {{service}}
 
 # Restart the service
 restart:
-    sudo systemctl restart {{service}}
+    systemctl --user restart {{service}}
 
 # Show service status
 status:
-    @systemctl status {{service}}
+    @systemctl --user status {{service}}
 
-# Enable service to start on boot
+# Enable service to start on login
 enable:
-    sudo systemctl enable {{service}}
+    systemctl --user enable {{service}}
 
-# Disable service from starting on boot
+# Disable service from starting on login
 disable:
-    sudo systemctl disable {{service}}
+    systemctl --user disable {{service}}
 
 # Tail the log (follow mode)
 log:

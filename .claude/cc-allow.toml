@@ -214,7 +214,7 @@ names = [
     "lvm", "pvcreate", "vgcreate", "lvcreate",
     # System control
     "shutdown", "reboot", "halt", "poweroff", "init", "telinit",
-    "systemctl",                    # can stop critical services
+    # "systemctl" - handled by specific rules below
     # User/group management
     "useradd", "userdel", "usermod",
     "groupadd", "groupdel", "groupmod",
@@ -303,6 +303,25 @@ action = "ask"
 [[rule]]
 command = "chgrp"
 action = "ask"
+
+# --- systemctl: Allow status commands ---
+[[rule]]
+command = "systemctl"
+action = "allow"
+[rule.args]
+position = { "0" = "status" }
+
+[[rule]]
+command = "systemctl"
+action = "allow"
+[rule.args]
+position = { "0" = "--user", "1" = "status" }
+
+# --- systemctl: Deny other operations ---
+[[rule]]
+command = "systemctl"
+action = "deny"
+message = "Only systemctl status is allowed"
 
 # --- git: Block force push ---
 [[rule]]
