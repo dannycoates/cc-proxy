@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Runs mitmproxy with the Claude API logger addon
-# Outputs one JSON object per line (jsonl format)
+# Runs mitmproxy UI with the SSE content view addon for Claude API responses
 #
-# Usage: cc-proxy [-s] [port]
+# Usage: cc-mitm [-s] [port]
 #   -s  Include thinking signatures in output (default: excluded)
 
 set -euo pipefail
@@ -20,5 +19,4 @@ shift $((OPTIND - 1))
 PORT="${1:-8080}"
 
 cd "$SCRIPT_DIR"
-exec uv run mitmdump -q -p "$PORT" -s "$SCRIPT_DIR/src/cc_proxy/json_request_logger.py" \
-    "~u api.anthropic.com/v1/messages"
+exec uv run mitmproxy -p "$PORT" -s "$SCRIPT_DIR/src/cc_proxy/sse_contentview.py"
