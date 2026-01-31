@@ -19,4 +19,5 @@ shift $((OPTIND - 1))
 PORT="${1:-8080}"
 
 cd "$SCRIPT_DIR"
-exec uv run mitmproxy -p "$PORT" -s "$SCRIPT_DIR/src/cc_proxy/sse_contentview.py"
+exec uv run mitmproxy -p "$PORT" -s "$SCRIPT_DIR/src/cc_proxy/sse_contentview.py" \
+    --set view_filter="~u api.anthropic.com/v1/messages"
