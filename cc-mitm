@@ -1,23 +1,53 @@
 #!/usr/bin/env bash
 # Runs mitmproxy UI with the SSE content view addon for Claude API responses
 #
-# Usage: cc-mitm [-s] [port]
-#   -s  Include thinking signatures in output (default: excluded)
+# Usage: cc-mitm [-s] [-r <session-uuid>] [port]
+#   -s              Include thinking signatures in output (default: excluded)
+#   -r <session>    Load a saved capture from cc-capture (UUID or UUID prefix)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="${HOME}/.local/log/cc-proxy"
 
-while getopts "s" opt; do
+REPLAY_FILE=""
+
+while getopts "sr:" opt; do
     case $opt in
         s) export CC_PROXY_INCLUDE_SIGNATURE=1 ;;
-        *) echo "Usage: $0 [-s] [port]" >&2; exit 1 ;;
+        r)
+            # Find the capture file by UUID or prefix match
+            if [[ -f "$LOG_DIR/${OPTARG}.flow" ]]; then
+                REPLAY_FILE="$LOG_DIR/${OPTARG}.flow"
+            else
+                matches=("$LOG_DIR/${OPTARG}"*.flow)
+                if [[ ${#matches[@]} -eq 1 && -f "${matches[0]}" ]]; then
+                    REPLAY_FILE="${matches[0]}"
+                elif [[ ${#matches[@]} -gt 1 ]]; then
+                    echo "Ambiguous prefix '${OPTARG}', matches:" >&2
+                    printf "  %s\n" "${matches[@]}" >&2
+                    exit 1
+                else
+                    echo "No capture found for '${OPTARG}' in $LOG_DIR" >&2
+                    exit 1
+                fi
+            fi
+            ;;
+        *) echo "Usage: $0 [-s] [-r <session-uuid>] [port]" >&2; exit 1 ;;
     esac
 done
 shift $((OPTIND - 1))
 
-PORT="${1:-8080}"
-
 cd "$SCRIPT_DIR"
-exec uv run mitmproxy -p "$PORT" -s "$SCRIPT_DIR/src/cc_proxy/sse_contentview.py" \
-    --set view_filter="~u api.anthropic.com/v1/messages"
+
+if [[ -n "$REPLAY_FILE" ]]; then
+    echo "Loading capture: $REPLAY_FILE"
+    exec uv run mitmproxy -n -r "$REPLAY_FILE" \
+        -s "$SCRIPT_DIR/src/cc_proxy/sse_contentview.py" \
+        --set view_filter="~u api.anthropic.com/v1/messages"
+else
+    PORT="${1:-8080}"
+    exec uv run mitmproxy -p "$PORT" \
+        -s "$SCRIPT_DIR/src/cc_proxy/sse_contentview.py" \
+        --set view_filter="~u api.anthropic.com/v1/messages"
+fi

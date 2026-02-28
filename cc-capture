@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Wrapper that launches claude with mitmdump capturing raw HTTPS flows.
+# Flows are saved to ~/.local/log/cc-proxy/<session-id>.flow
+#
+# Usage: cc-capture [claude args...]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ORIG_DIR="$PWD"
+
+PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')
+LOG_DIR="${HOME}/.local/log/cc-proxy"
+MITM_CA="${HOME}/.mitmproxy/mitmproxy-ca-cert.pem"
+
+SESSION_ID=$(uuidgen)
+CAPTURE_FILE="$LOG_DIR/${SESSION_ID}.flow"
+META_FILE="$LOG_DIR/${SESSION_ID}.json"
+
+mkdir -p "$LOG_DIR"
+
+# Save session metadata
+GIT_COMMIT=$(git -C "$ORIG_DIR" rev-parse HEAD 2>/dev/null || echo "null")
+if [ "$GIT_COMMIT" != "null" ]; then
+    GIT_COMMIT="\"$GIT_COMMIT\""
+fi
+printf '{"cwd":"%s","git_commit":%s}\n' "$ORIG_DIR" "$GIT_COMMIT" > "$META_FILE"
+
+# Start mitmdump in background, saving raw flows
+# --allow-hosts: only MITM these hosts; everything else tunnels through untouched
+cd "$SCRIPT_DIR"
+uv run mitmdump -q -p "$PORT" -w "$CAPTURE_FILE" \
+    --allow-hosts "api.anthropic.com" &
+MITM_PID=$!
+
+cleanup() {
+    kill "$MITM_PID" 2>/dev/null || true
+    wait "$MITM_PID" 2>/dev/null || true
+    echo "Capture saved: $CAPTURE_FILE"
+}
+trap cleanup EXIT
+
+# Give mitmdump a moment to bind the port
+sleep 1
+
+# Run claude through the proxy with the generated session ID
+cd "$ORIG_DIR"
+HTTPS_PROXY="http://127.0.0.1:$PORT" \
+NODE_EXTRA_CA_CERTS="$MITM_CA" \
+    claude --session-id "$SESSION_ID" "$@"

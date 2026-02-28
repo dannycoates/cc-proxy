@@ -4,9 +4,12 @@
 version = "2.0"
 
 [bash.allow]
-commands = ["just", "uv"]
+commands = ["just", "uv", "python3", "file"]
 
 # Ask for just install/uninstall tasks
 [[bash.ask.just]]
 message = "Running just {{.Arg 0}} task"
 args.any = ["install", "uninstall", "enable", "disable"]
+
+[read.allow]
+paths = ["path:$HOME/.local/log/cc-proxy/**"]

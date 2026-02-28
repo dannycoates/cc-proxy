@@ -32,7 +32,8 @@ class JSONRequestLogger:
         except json.JSONDecodeError:
             return
 
-        print(json.dumps({"request": request_json}), flush=True)
+        headers = dict(flow.request.headers)
+        print(json.dumps({"headers": headers, "request": request_json}), flush=True)
 
     def response(self, flow: http.HTTPFlow):
         if not flow.response or not flow.response.content:
@@ -44,7 +45,8 @@ class JSONRequestLogger:
 
         content = parse_sse_stream(flow.response.content)
         if content:
-            print(json.dumps({"response": content}), flush=True)
+            headers = dict(flow.response.headers)
+            print(json.dumps({"headers": headers, "response": content}), flush=True)
 
 
 addons = [JSONRequestLogger()]

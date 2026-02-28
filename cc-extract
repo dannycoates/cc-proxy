@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Extracts Claude API request/response JSON from a raw mitmproxy .flow file.
+# Outputs one JSON object per line (jsonl format) to stdout.
+#
+# Usage: cc-extract [-s] <flow-file>
+#   -s  Include thinking signatures in output (default: excluded)
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+while getopts "s" opt; do
+    case $opt in
+        s) export CC_PROXY_INCLUDE_SIGNATURE=1 ;;
+        *) echo "Usage: $0 [-s] <flow-file>" >&2; exit 1 ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 [-s] <flow-file>" >&2
+    exit 1
+fi
+
+FLOW_FILE="$1"
+
+cd "$SCRIPT_DIR"
+exec uv run mitmdump -q -n -r "$FLOW_FILE" -s "$SCRIPT_DIR/src/cc_proxy/json_request_logger.py" \
+    "~u api.anthropic.com/v1/messages"
