@@ -32,8 +32,10 @@ class JSONRequestLogger:
         except json.JSONDecodeError:
             return
 
-        headers = dict(flow.request.headers)
-        print(json.dumps({"headers": headers, "request": request_json}), flush=True)
+        flow.metadata["captured_request"] = {
+            "headers": dict(flow.request.headers),
+            "body": request_json,
+        }
 
     def response(self, flow: http.HTTPFlow):
         if not flow.response or not flow.response.content:
@@ -43,10 +45,19 @@ class JSONRequestLogger:
         if "text/event-stream" not in content_type:
             return
 
+        captured_request = flow.metadata.get("captured_request")
+        if not captured_request:
+            return
+
         content = parse_sse_stream(flow.response.content)
         if content:
-            headers = dict(flow.response.headers)
-            print(json.dumps({"headers": headers, "response": content}), flush=True)
+            print(json.dumps({
+                "request": captured_request,
+                "response": {
+                    "headers": dict(flow.response.headers),
+                    "body": content,
+                },
+            }), flush=True)
 
 
 addons = [JSONRequestLogger()]

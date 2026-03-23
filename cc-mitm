@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Runs mitmproxy UI with the SSE content view addon for Claude API responses
 #
-# Usage: cc-mitm [-s] [-r <session-uuid>] [port]
+# Usage: cc-mitm [-s] [-r <file-or-uuid>] [port]
 #   -s              Include thinking signatures in output (default: excluded)
-#   -r <session>    Load a saved capture from cc-capture (UUID or UUID prefix)
+#   -r <path|uuid>  Load a saved capture (file path, or UUID/prefix from cc-capture)
 
 set -euo pipefail
 
@@ -16,10 +16,14 @@ while getopts "sr:" opt; do
     case $opt in
         s) export CC_PROXY_INCLUDE_SIGNATURE=1 ;;
         r)
-            # Find the capture file by UUID or prefix match
-            if [[ -f "$LOG_DIR/${OPTARG}.flow" ]]; then
+            if [[ -f "$OPTARG" ]]; then
+                # Direct file path
+                REPLAY_FILE="$OPTARG"
+            elif [[ -f "$LOG_DIR/${OPTARG}.flow" ]]; then
+                # Exact UUID match
                 REPLAY_FILE="$LOG_DIR/${OPTARG}.flow"
             else
+                # UUID prefix match
                 matches=("$LOG_DIR/${OPTARG}"*.flow)
                 if [[ ${#matches[@]} -eq 1 && -f "${matches[0]}" ]]; then
                     REPLAY_FILE="${matches[0]}"
@@ -28,12 +32,12 @@ while getopts "sr:" opt; do
                     printf "  %s\n" "${matches[@]}" >&2
                     exit 1
                 else
-                    echo "No capture found for '${OPTARG}' in $LOG_DIR" >&2
+                    echo "No capture found for '${OPTARG}'" >&2
                     exit 1
                 fi
             fi
             ;;
-        *) echo "Usage: $0 [-s] [-r <session-uuid>] [port]" >&2; exit 1 ;;
+        *) echo "Usage: $0 [-s] [-r <file-or-uuid>] [port]" >&2; exit 1 ;;
     esac
 done
 shift $((OPTIND - 1))
